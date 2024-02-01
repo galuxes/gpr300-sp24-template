@@ -38,6 +38,37 @@ struct Material {
 	float Shininess = 128;
 }material;
 
+struct Framebuffer {
+	unsigned int fbo;
+	unsigned int colorBuffer[8];
+	unsigned int depthBuffer;
+	unsigned int width;
+	unsigned int height;
+}framebuffer;
+
+
+Framebuffer createFrameBuffer(unsigned int width, unsigned int height, int colorFormat)
+{
+	//create Framebuffer Object
+	glCreateFramebuffers(1, &framebuffer.fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
+	//Create Color Buffer
+	glGenTextures(1, &framebuffer.colorBuffer[0]);
+	glBindTexture(GL_TEXTURE_2D, framebuffer.colorBuffer[0]);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, width, height);
+	//Attach color buffer to framebuffer
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, framebuffer.colorBuffer[0], 0);
+
+	glGenTextures(1, &framebuffer.depthBuffer);
+	glBindTexture(GL_TEXTURE_2D, framebuffer.depthBuffer);
+	//Create depth buffer
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, width, height);
+	//Attach to framebuffer
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, framebuffer.depthBuffer, 0);
+
+	return framebuffer;
+}
+
 
 int main() {
 	GLFWwindow* window = initWindow("Assignment 0", screenWidth, screenHeight);
