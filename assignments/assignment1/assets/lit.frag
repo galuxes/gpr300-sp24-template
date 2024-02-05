@@ -1,5 +1,9 @@
 #version 450
 out vec4 FragColor; //The color of this fragment
+
+mat3 GAUSSIANBLUR = mat3(1,2,1,2,4,2,1,2,1) * .0625f;
+vec2[] OFFSETS = vec2[](vec2(-1,1), vec2(0,1), vec2(1,1),vec2(-1,0), vec2(0,0), vec2(1,0), vec2(-1,-1),vec2(0,-1),vec2(1,-1));
+
 in Surface{
 	vec3 WorldPos; //Vertex position in world space
 	vec3 WorldNormal; //Vertex normal in world space
@@ -21,6 +25,7 @@ struct Material{
 uniform Material _Material;
 
 void main(){
+
 	//Make sure fragment normal is still length 1 after interpolation.
 	vec3 normal = normalize(fs_in.WorldNormal);
 	//Light pointing straight down
@@ -35,5 +40,29 @@ void main(){
 	vec3 lightColor = (_Material.Kd * diffuseFactor + _Material.Ks * specularFactor) * _LightColor;
 	lightColor+=_AmbientColor * _Material.Ka;
 	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
+
+
+//	vec2 uv = normalize(fs_in.TexCoord);
+//	vec2 offsetDistance = vec2((2));
+//	offsetDistance = normalize(offsetDistance);
+//
+//	vec3 totalColor = vec3(0.0);
+//    
+//    for(int i = 0; i < 9; i++){
+//        //Sample from a neighboring pixel
+//        vec3 color = texture(_MainTex, uv + OFFSETS[i] * offsetDistance).rgb;
+//        
+//        //Convert index i to kernel col,row
+//        int col = i % 3;
+//        int row = i / 3;
+//        
+//        //Multiply current sample by kernel weight
+//        color*=GAUSSIANBLUR[col][row];
+//        
+//        //Accumulate
+//        totalColor+=color;
+//    }
+
+
 	FragColor = vec4(objectColor * lightColor,1.0);
 }

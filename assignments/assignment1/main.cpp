@@ -66,6 +66,11 @@ Framebuffer createFrameBuffer(unsigned int width, unsigned int height, int color
 	//Attach to framebuffer
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, framebuffer.depthBuffer, 0);
 
+	GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
+		printf("Framebuffer incomplete: %d", fboStatus);
+	}
+
 	return framebuffer;
 }
 
@@ -87,6 +92,7 @@ int main() {
 	glCullFace(GL_BACK); //Back face culling
 	glEnable(GL_DEPTH_TEST); //Depth testing
 
+	createFrameBuffer(screenWidth, screenHeight, 0);//idk what color format is yet
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -94,6 +100,8 @@ int main() {
 		float time = (float)glfwGetTime();
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
 
 		//RENDER
 		glClearColor(0.6f,0.8f,0.92f,1.0f);
