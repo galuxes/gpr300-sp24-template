@@ -1,9 +1,6 @@
 #version 450
 out vec4 FragColor; //The color of this fragment
 
-mat3 GAUSSIANBLUR = mat3(1,2,1,2,4,2,1,2,1) * .0625f;
-vec2[] OFFSETS = vec2[](vec2(-1,1), vec2(0,1), vec2(1,1),vec2(-1,0), vec2(0,0), vec2(1,0), vec2(-1,-1),vec2(0,-1),vec2(1,-1));
-
 in Surface{
 	vec3 WorldPos; //Vertex position in world space
 	vec3 WorldNormal; //Vertex normal in world space

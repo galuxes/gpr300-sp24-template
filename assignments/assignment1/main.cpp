@@ -80,6 +80,7 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
+	ew::Shader blurShader = ew::Shader("assets/blur.vert", "assets/blur.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
 	GLuint brickTexture = ew::loadTexture("assets/Rock037_2K-PNG/Rock037_2K-PNG_Color.png");
 
@@ -91,6 +92,9 @@ int main() {
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //Back face culling
 	glEnable(GL_DEPTH_TEST); //Depth testing
+
+	unsigned int dummyVAO;
+	glCreateVertexArrays(1, &dummyVAO);
 
 	createFrameBuffer(screenWidth, screenHeight, 0);//idk what color format is yet
 
@@ -105,7 +109,6 @@ int main() {
 
 		//RENDER
 		glClearColor(0.6f,0.8f,0.92f,1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//rotate monkey
@@ -128,6 +131,19 @@ int main() {
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		monkeyModel.draw(); //Draws monkey model using current shader
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		blurShader.use();
+
+		glBindTextureUnit(0, framebuffer.colorBuffer[0]);
+		glBindVertexArray(dummyVAO);
+
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		shader.setInt("_MainTex", 0);
 
 		drawUI();
 
