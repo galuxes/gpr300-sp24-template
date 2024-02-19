@@ -75,5 +75,5 @@ void main(){
 
     //blurColor = blurColor2 - blurColor;
 
-	FragColor = vec4(blurColor2 - edgeColor,1.0);
+	FragColor = vec4(blurColor - edgeColor,1.0);
 }
