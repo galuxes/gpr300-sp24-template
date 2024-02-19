@@ -15,6 +15,9 @@ uniform vec3 _EyePos;
 uniform vec3 _LightDirection;
 uniform vec3 _LightColor = vec3(1.0);
 uniform vec3 _AmbientColor = vec3(0.3,0.4,0.46);
+float minBias = 0.005;
+float maxBias = 0.015;
+
 
 struct Material{
 	float Ka; //Ambient coefficient (0-1)
@@ -24,12 +27,12 @@ struct Material{
 };
 uniform Material _Material;
 
-float calcShadow(sampler2D shadowMap, vec4 lightSpacePos){
+float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias){
 	//Homogeneous Clip space to NDC [-w,w] to [-1,1]
     vec3 sampleCoord = lightSpacePos.xyz / lightSpacePos.w;
     //Convert from [-1,1] to [0,1]
     sampleCoord = sampleCoord * 0.5 + 0.5;
-	float myDepth = sampleCoord.z; 
+	float myDepth = sampleCoord.z - bias; 
 	float shadowMapDepth = texture(shadowMap, sampleCoord.xy).r;
 	//step(a,b) returns 1.0 if a >= b, 0.0 otherwise
 	return step(shadowMapDepth,myDepth);
@@ -52,8 +55,9 @@ void main(){
 	lightColor+=_AmbientColor * _Material.Ka;
 	//vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
 
+	float bias = max(maxBias * (1.0 - dot(normal,toLight)),minBias);
 	//1: in shadow, 0: out of shadow
-	float shadow = calcShadow(_ShadowMap, LightSpacePos); 
+	float shadow = calcShadow(_ShadowMap, LightSpacePos, bias); 
 	vec3 light = lightColor * (1.0 - shadow);
 
 	FragColor = vec4(/*objectColor * */light,1.0);

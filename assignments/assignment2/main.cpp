@@ -178,7 +178,6 @@ int main() {
 	createShadowMap(2048, 2048, &dummyVAO);
 
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK); //Back face culling
 	glEnable(GL_DEPTH_TEST); //Depth testing
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -196,6 +195,8 @@ int main() {
 		//camera controls
 		cameraController.move(window, &camera, deltaTime);
 
+		glCullFace(GL_FRONT);
+
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.fbo);
 		glViewport(0, 0, shadowMap.width, shadowMap.height);
 		glClear(GL_DEPTH_BUFFER_BIT);
@@ -209,6 +210,8 @@ int main() {
 		depthOnlyShader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
 
+
+		glCullFace(GL_BACK);
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
 		glViewport(0, 0, screenWidth, screenHeight);
