@@ -226,8 +226,8 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//Bind rock texture to texture unit 0 
-		glBindTextureUnit(0, rockTexture);
-		glBindTextureUnit(1, shadowMap.depthBuffer);
+		//glBindTextureUnit(0, rockTexture);
+		glBindTextureUnit(0, shadowMap.depthBuffer);
 
 		litShader.use();
 
@@ -237,8 +237,9 @@ int main() {
 		litShader.setFloat("_Material.Ks", material.Ks);
 		litShader.setFloat("_Material.Shininess", material.Shininess);
 		litShader.setVec3("_EyePos", camera.position);
-		litShader.setInt("_MainTex", 0);
-		litShader.setInt("_ShadowMap", 1);
+		litShader.setVec3("_LightDirection", light.direction);
+		//litShader.setInt("_MainTex", 0);
+		litShader.setInt("_ShadowMap", 0);
 		litShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		litShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		litShader.setMat4("LightViewProj", lightViewProjection);
