@@ -93,12 +93,6 @@ struct shadowCamera {
 
 }shadowCamera;
 
-//Lighting createLightSource(glm::vec3 eyePos, glm::vec3 centerPos, glm::vec3 up = glm::vec3(0.f,1.f,0.f))
-//{
-//	light.lightView = glm::lookAt(eyePos, centerPos, up);
-//	light.lightProj = glm::ortho(l, r, u, d, n, f);
-//}
-
 Framebuffer createFrameBuffer(unsigned int width, unsigned int height, int colorFormat)
 {
 	framebuffer.width = width;
@@ -158,8 +152,6 @@ ShadowMap createShadowMap(unsigned int width, unsigned int height , unsigned int
 
 	return shadowMap;
 }
-
-
 
 
 int main() {
@@ -242,7 +234,7 @@ int main() {
 		litShader.setInt("_ShadowMap", 0);
 		litShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		litShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
-		litShader.setMat4("LightViewProj", lightViewProjection);
+		litShader.setMat4("_LightViewProj", lightViewProjection);
 		monkeyModel.draw(); //Draws monkey model using current shader
 		litShader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
