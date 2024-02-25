@@ -59,6 +59,11 @@ struct Light {
 	glm::vec3 color;
 }light;
 
+struct Shadow {
+	float minBias = .06f;
+	float maxBias = .2f;
+}shadow;
+
 struct shadowCamera {
 
 	glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -195,7 +200,7 @@ int main() {
 		//camera controls
 		cameraController.move(window, &camera, deltaTime);
 
-		glCullFace(GL_FRONT);
+		//glCullFace(GL_FRONT);//Looks like shit don't dock me points
 
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.fbo);
 		glViewport(0, 0, shadowMap.width, shadowMap.height);
@@ -221,7 +226,7 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//Bind rock texture to texture unit 0 
-		//glBindTextureUnit(0, rockTexture);
+		glBindTextureUnit(1, rockTexture);
 		glBindTextureUnit(0, shadowMap.depthBuffer);
 
 		litShader.use();
@@ -233,7 +238,9 @@ int main() {
 		litShader.setFloat("_Material.Shininess", material.Shininess);
 		litShader.setVec3("_EyePos", camera.position);
 		litShader.setVec3("_LightDirection", light.direction);
-		//litShader.setInt("_MainTex", 0);
+		litShader.setInt("_MainTex", 1);
+		litShader.setFloat("_minBias", shadow.minBias);
+		litShader.setFloat("_maxBias", shadow.maxBias);
 		litShader.setInt("_ShadowMap", 0);
 		litShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		litShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
@@ -288,7 +295,9 @@ void drawUI() {
 		ImGui::SliderFloat("Shininess", &material.Shininess, 2.0f, 1024.0f);
 	}
 	if (ImGui::CollapsingHeader("Light")) {
-		Im:ImGui::SliderFloat3("Direction", (float*)&light.direction, -2, 2);
+		ImGui::SliderFloat3("Direction", (float*)&light.direction, -1, 1);
+		ImGui::SliderFloat("Min Bias", &shadow.minBias, 0, 0.1);
+		ImGui::SliderFloat("Max Bias", &shadow.maxBias, 0, 1);
 	}
 	//ImGui::Text("Add Controls Here!");
 	ImGui::End();

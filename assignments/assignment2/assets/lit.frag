@@ -10,13 +10,13 @@ in Surface{
 in vec4 LightSpacePos;
 
 uniform sampler2D _ShadowMap;
-//uniform sampler2D _MainTex; 
+uniform sampler2D _MainTex; 
 uniform vec3 _EyePos;
 uniform vec3 _LightDirection;
 uniform vec3 _LightColor = vec3(1.0);
 uniform vec3 _AmbientColor = vec3(0.3,0.4,0.46);
-float minBias = 0.005;
-float maxBias = 0.015;
+uniform float _minBias = 0.02;
+uniform float _maxBias = 0.2;
 
 
 struct Material{
@@ -33,9 +33,20 @@ float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias){
     //Convert from [-1,1] to [0,1]
     sampleCoord = sampleCoord * 0.5 + 0.5;
 	float myDepth = sampleCoord.z - bias; 
-	float shadowMapDepth = texture(shadowMap, sampleCoord.xy).r;
-	//step(a,b) returns 1.0 if a >= b, 0.0 otherwise
-	return step(shadowMapDepth,myDepth);
+
+	float totalShadow = 0;
+
+	vec2 texelOffset = 1.0 / textureSize(shadowMap,0);
+	for(int y = -1; y <= 1; y++)
+	{
+		for(int x = -1; x <= 1; x++)
+		{
+			vec2 uv = sampleCoord.xy + vec2(x * texelOffset.x, y * texelOffset.y);
+			totalShadow+=step(texture(shadowMap,uv).r, myDepth);
+		}
+	}
+
+	return totalShadow/=9.0;
 }
 
 void main(){
@@ -52,13 +63,14 @@ void main(){
 	float specularFactor = pow(max(dot(normal,h),0.0),_Material.Shininess);
 	//Combination of specular and diffuse reflection
 	vec3 lightColor = (_Material.Kd * diffuseFactor + _Material.Ks * specularFactor) * _LightColor;
-	lightColor+=_AmbientColor * _Material.Ka;
-	//vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
+	//lightColor+=_AmbientColor * _Material.Ka;
+	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
 
-	float bias = max(maxBias * (1.0 - dot(normal,toLight)),minBias);
+	float bias = max(_maxBias * (1.0 - dot(normal,toLight)),_minBias);
 	//1: in shadow, 0: out of shadow
 	float shadow = calcShadow(_ShadowMap, LightSpacePos, bias); 
 	vec3 light = lightColor * (1.0 - shadow);
+	light += _AmbientColor * _Material.Ka;
 
 	FragColor = vec4(/*objectColor * */light,1.0);
 }
