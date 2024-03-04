@@ -6,16 +6,13 @@ layout(location = 2) out vec3 gAlbedo;
 
 in Surface{
 	vec3 WorldPos; 
-	vec2 TexCoord;
 	vec3 WorldNormal;
-}fs
+	vec2 TexCoord;
+}fs_in;
 
-
-
-
-void ma
-
-ion = fs_in.WorldPos;
+uniform sampler2D _MainTex;
+void main(){
+	gPosition = fs_in.WorldPos;
 	gAlbedo = texture(_MainTex,fs_in.TexCoord).rgb;
 	gNormal = normalize(fs_in.WorldNormal);
 }

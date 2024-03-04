@@ -47,6 +47,8 @@ struct Framebuffer {
 	unsigned int height;
 }framebuffer;
 
+Framebuffer gBuffer;
+
 struct ShadowMap {
 	unsigned int fbo;
 	unsigned int depthBuffer;
@@ -208,6 +210,7 @@ int main() {
 	ew::Shader litShader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	ew::Shader blurShader = ew::Shader("assets/blur.vert", "assets/blur.frag");
 	ew::Shader depthOnlyShader = ew::Shader("assets/depthOnly.vert", "assets/depthOnly.frag");
+	ew::Shader geoShader = ew::Shader("assets/geo.vert", "assets/geo.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
 	GLuint rockTexture = ew::loadTexture("assets/Rock037_2K-PNG/Rock037_2K-PNG_Color.png");
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
@@ -222,7 +225,7 @@ int main() {
 	unsigned int dummyVAO;
 
 	
-	Framebuffer gBuffer = createGBuffer(screenWidth, screenHeight);
+	gBuffer = createGBuffer(screenWidth, screenHeight);
 	createFrameBuffer(screenWidth, screenHeight, 0);//idk what color format is yet
 	createShadowMap(2048, 2048, &dummyVAO);
 
@@ -244,6 +247,21 @@ int main() {
 		//camera controls
 		cameraController.move(window, &camera, deltaTime);
 
+		glm::mat4 lightViewProjection = shadowCamera.lightProj() * shadowCamera.lightView(); //Based on light type, direction
+
+		//geo pass
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
+		glViewport( 0, 0, gBuffer.width, gBuffer.height);
+		glClearColor( 0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		geoShader.setMat4("_Model", monkeyTransform.modelMatrix());
+		geoShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		geoShader.setMat4("_LightViewProj", lightViewProjection);
+		monkeyModel.draw(); //Draws monkey model using current shader
+		geoShader.setMat4("_Model", planeTransform.modelMatrix());
+		planeMesh.draw();
+
+
 		//glCullFace(GL_FRONT);//Looks like shit don't dock me points
 
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.fbo);
@@ -251,7 +269,6 @@ int main() {
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		depthOnlyShader.use();
-		glm::mat4 lightViewProjection = shadowCamera.lightProj() * shadowCamera.lightView(); //Based on light type, direction
 		//Render scene from light’s point of view
 		depthOnlyShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		depthOnlyShader.setMat4("_ViewProjection", lightViewProjection);
@@ -355,6 +372,14 @@ void drawUI() {
 	//shadowMap is the texture2D handle
 	ImGui::Image((ImTextureID)shadowMap.depthBuffer, windowSize, ImVec2(0, 1), ImVec2(1, 0));
 	ImGui::EndChild();
+	ImGui::End();
+
+	ImGui::Begin("GBuffers");
+	ImVec2 texSize = ImVec2(gBuffer.width / 4, gBuffer.height / 4);
+	for (size_t i = 0; i < 3; i++)
+	{
+		ImGui::Image((ImTextureID)gBuffer.colorBuffer[i], texSize, ImVec2(0, 1), ImVec2(1, 0));
+	}
 	ImGui::End();
 
 
