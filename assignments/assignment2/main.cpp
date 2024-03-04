@@ -64,7 +64,7 @@ struct Shadow {
 	float maxBias = .2f;
 }shadow;
 
-struct shadowCamera {
+struct ShadowCamera {
 
 	glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f);
 
