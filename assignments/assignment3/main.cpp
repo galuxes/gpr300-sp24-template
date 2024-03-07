@@ -181,7 +181,7 @@ Framebuffer createGBuffer(unsigned int width, unsigned int height)
 	{
 		glGenTextures( 1, &framebuffer.colorBuffer[i]);
 		glBindTexture(GL_TEXTURE_2D, framebuffer.colorBuffer[i]);
-		glad_glTextureStorage2D(GL_TEXTURE_2D, 1, formats[i], width, height);
+		glTexStorage2D(GL_TEXTURE_2D, 1, formats[i], width, height);
 
 		//prevent wrapping by clamping
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -197,10 +197,26 @@ Framebuffer createGBuffer(unsigned int width, unsigned int height)
 	};
 	glDrawBuffers(3, drawBuffers);
 
+	glGenTextures(1, &framebuffer.depthBuffer);
+	glBindTexture(GL_TEXTURE_2D, framebuffer.depthBuffer);
+	//Create depth buffer
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, framebuffer.width, framebuffer.height);
+	//Attach to framebuffer
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, framebuffer.depthBuffer, 0);
+
+	GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
+		printf("Framebuffer incomplete: %d", fboStatus);
+	}
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 	return framebuffer;
 }
+
+void drawScene(ew::Model monkeyModel, ew::Mesh planeMesh, ew::Shader &shader);
 
 
 int main() {
@@ -216,6 +232,7 @@ int main() {
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
 
 	planeTransform.position.y += -1;
+	planeTransform.scale *= 100;
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
@@ -250,16 +267,19 @@ int main() {
 		glm::mat4 lightViewProjection = shadowCamera.lightProj() * shadowCamera.lightView(); //Based on light type, direction
 
 		//geo pass
+		geoShader.use();
+
+		glBindTextureUnit(1, rockTexture);
+		glBindTextureUnit(0, framebuffer.fbo);
+
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
 		glViewport( 0, 0, gBuffer.width, gBuffer.height);
 		glClearColor( 0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		geoShader.setMat4("_Model", monkeyTransform.modelMatrix());
+		geoShader.setInt("_MainTex", 1);
 		geoShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		geoShader.setMat4("_LightViewProj", lightViewProjection);
-		monkeyModel.draw(); //Draws monkey model using current shader
-		geoShader.setMat4("_Model", planeTransform.modelMatrix());
-		planeMesh.draw();
+		drawScene(monkeyModel, planeMesh, geoShader);
 
 
 		//glCullFace(GL_FRONT);//Looks like shit don't dock me points
@@ -270,11 +290,8 @@ int main() {
 
 		depthOnlyShader.use();
 		//Render scene from light’s point of view
-		depthOnlyShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		depthOnlyShader.setMat4("_ViewProjection", lightViewProjection);
-		monkeyModel.draw(); //Draws monkey model using current shader
-		depthOnlyShader.setMat4("_Model", planeTransform.modelMatrix());
-		planeMesh.draw();
+		drawScene(monkeyModel, planeMesh, depthOnlyShader);
 
 
 		glCullFace(GL_BACK);
@@ -303,12 +320,9 @@ int main() {
 		litShader.setFloat("_minBias", shadow.minBias);
 		litShader.setFloat("_maxBias", shadow.maxBias);
 		litShader.setInt("_ShadowMap", 0);
-		litShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		litShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		litShader.setMat4("_LightViewProj", lightViewProjection);
-		monkeyModel.draw(); //Draws monkey model using current shader
-		litShader.setMat4("_Model", planeTransform.modelMatrix());
-		planeMesh.draw();
+		drawScene(monkeyModel, planeMesh, geoShader);
 
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -332,6 +346,23 @@ int main() {
 	glDeleteFramebuffers(1, &framebuffer.fbo);
 
 	printf("Shutting down...");
+}
+
+void drawScene(ew::Model monkeyModel, ew::Mesh planeMesh, ew::Shader &shader) {//Draws scene using current shader
+	shader.setMat4("_Model", planeTransform.modelMatrix());
+	planeMesh.draw();
+	float scalar = 4.5;
+	for (int i = -50; i < 50; i++)
+	{
+		for (int j = -50; j < 50; j++) 
+		{
+			ew::Transform temp = monkeyTransform;
+			glm::vec3 offset = glm::vec3( i*scalar, 0, j*scalar);
+			temp.position += offset;
+			shader.setMat4("_Model", temp.modelMatrix());
+			monkeyModel.draw();
+		}
+	}
 }
 
 void resetCamera(ew::Camera* camera, ew::CameraController* controller) {
