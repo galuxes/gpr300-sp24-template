@@ -227,6 +227,7 @@ int main() {
 	ew::Shader blurShader = ew::Shader("assets/blur.vert", "assets/blur.frag");
 	ew::Shader depthOnlyShader = ew::Shader("assets/depthOnly.vert", "assets/depthOnly.frag");
 	ew::Shader geoShader = ew::Shader("assets/geo.vert", "assets/geo.frag");
+	ew::Shader defferedShader = ew::Shader("assets/deferredLit.vert", "assets/deferredLit.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
 	GLuint rockTexture = ew::loadTexture("assets/Rock037_2K-PNG/Rock037_2K-PNG_Color.png");
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
@@ -281,8 +282,26 @@ int main() {
 		geoShader.setMat4("_LightViewProj", lightViewProjection);
 		drawScene(monkeyModel, planeMesh, geoShader);
 
+		
+		//LIGHTING PASS
+		//if using post processing, we draw to our offscreen framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
+		glViewport(0, 0, framebuffer.width, framebuffer.height);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		deferredShader.use();
+		//TODO: Set the rest of your lighting uniforms for deferredShader. (same way we did this for lit.frag)
 
-		//glCullFace(GL_FRONT);//Looks like shit don't dock me points
+		//Bind g-buffer textures
+		glBindTextureUnit(0, gBuffer.colorBuffer[0]);
+		glBindTextureUnit(1, gBuffer.colorBuffer[1]);
+		glBindTextureUnit(2, gBuffer.colorBuffer[2]);
+		glBindTextureUnit(3, shadowMap.depthBuffer); //For shadow mapping
+
+		glBindVertexArray(dummyVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+
+		//ShadowMap Pass
 
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.fbo);
 		glViewport(0, 0, shadowMap.width, shadowMap.height);
