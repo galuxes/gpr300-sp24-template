@@ -1,6 +1,6 @@
 #version 450
 
-out vec2 uv;
+out vec2 UV;
 
 void main(){
 
@@ -8,7 +8,7 @@ void main(){
 
 	float v = (((uint(gl_VertexID)+1u) / 3u) % 2u);
 
-	uv = vec2(u,v);
+	UV = vec2(u,v);
 
 	gl_Position = vec4( -1.0 + u * 2.0, -1.0 + v * 2.0, 0.0, 1.0);
 

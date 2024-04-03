@@ -7,10 +7,10 @@ uniform layout(binding = 0) sampler2D _gPositions;
 uniform layout(binding = 1) sampler2D _gNormals;
 uniform layout(binding = 2) sampler2D _gAlbedo;
 
-in vec4 LightSpacePos;
+vec4 LightSpacePos;
+uniform mat4 _LightViewProj;
 
 uniform sampler2D _ShadowMap;
-uniform sampler2D _MainTex; 
 uniform vec3 _EyePos;
 uniform vec3 _LightDirection;
 uniform vec3 _LightColor = vec3(1.0);
@@ -41,18 +41,16 @@ float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias){
 	{
 		for(int x = -1; x <= 1; x++)
 		{
-			vec2 uv = sampleCoord.xy + vec2(x * texelOffset.x, y * texelOffset.y);
-			totalShadow+=step(texture(shadowMap,uv).r, myDepth);
+			vec2 _uv = sampleCoord.xy + vec2(x * texelOffset.x, y * texelOffset.y);
+			totalShadow+=step(texture(shadowMap,_uv).r, myDepth);
 		}
 	}
 
 	return totalShadow/=9.0;
 }
 
-void main(){
-
-	vec3 normal = texture(_gNormals,UV).xyz;
-	vec3 worldPos = texture(_gPositions,UV).xyz;
+vec3 CalcLight(vec3 normal, vec3 worldPos, vec3 albedo)
+{
 	//Light pointing straight down
 	vec3 toLight = -_LightDirection;
 	float diffuseFactor = max(dot(normal,toLight),0.0);
@@ -63,14 +61,26 @@ void main(){
 	float specularFactor = pow(max(dot(normal,h),0.0),_Material.Shininess);
 	//Combination of specular and diffuse reflection
 	vec3 lightColor = (_Material.Kd * diffuseFactor + _Material.Ks * specularFactor) * _LightColor;
-	//lightColor+=_AmbientColor * _Material.Ka;
-	vec3 albedo = texture(_gAlbedo,UV).xyz;
+	lightColor+=_AmbientColor * _Material.Ka;
 
 	float bias = max(_maxBias * (1.0 - dot(normal,toLight)),_minBias);
 	//1: in shadow, 0: out of shadow
 	float shadow = calcShadow(_ShadowMap, LightSpacePos, bias); 
-	vec3 light = lightColor * (1.0 - shadow);
-	light += _AmbientColor * _Material.Ka;
+	return lightColor * (1.0 - shadow);
+	//light += _AmbientColor * _Material.Ka;
+}
+
+void main(){
+
+	vec3 normal = texture(_gNormals,UV).xyz;
+	vec3 worldPos = texture(_gPositions,UV).xyz;
+	vec3 albedo = texture(_gAlbedo,UV).xyz;
+	
+	vec3 light = vec3(0);
+
+	LightSpacePos = _LightViewProj * vec4(worldPos, 1);
+
+	light += CalcLight(normal, worldPos, albedo);
 
 	FragColor = vec4(albedo * light,1.0);
 }

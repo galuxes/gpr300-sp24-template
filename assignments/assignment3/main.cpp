@@ -267,16 +267,33 @@ int main() {
 
 		glm::mat4 lightViewProjection = shadowCamera.lightProj() * shadowCamera.lightView(); //Based on light type, direction
 
-		//geo pass
-		geoShader.use();
+		//ShadowMap Pass
 
-		glBindTextureUnit(1, rockTexture);
-		glBindTextureUnit(0, framebuffer.fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.fbo);
+		glViewport(0, 0, shadowMap.width, shadowMap.height);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		glCullFace(GL_FRONT);
+
+		depthOnlyShader.use();
+		//Render scene from light’s point of view
+		depthOnlyShader.setMat4("_ViewProjection", lightViewProjection);
+		drawScene(monkeyModel, planeMesh, depthOnlyShader);
+
+
+		//geo pass
 
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
 		glViewport( 0, 0, gBuffer.width, gBuffer.height);
 		glClearColor( 0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glCullFace(GL_BACK);
+
+		glBindTextureUnit(1, rockTexture);
+		glBindTextureUnit(0, framebuffer.fbo);
+
+		geoShader.use();
+
 		geoShader.setInt("_MainTex", 1);
 		geoShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		geoShader.setMat4("_LightViewProj", lightViewProjection);
@@ -288,61 +305,30 @@ int main() {
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
 		glViewport(0, 0, framebuffer.width, framebuffer.height);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		deferredShader.use();
-		//TODO: Set the rest of your lighting uniforms for deferredShader. (same way we did this for lit.frag)
+		defferedShader.use();
 
 		//Bind g-buffer textures
 		glBindTextureUnit(0, gBuffer.colorBuffer[0]);
 		glBindTextureUnit(1, gBuffer.colorBuffer[1]);
 		glBindTextureUnit(2, gBuffer.colorBuffer[2]);
 		glBindTextureUnit(3, shadowMap.depthBuffer); //For shadow mapping
+		
+		defferedShader.setFloat("_Material.Ka", material.Ka);
+		defferedShader.setFloat("_Material.Kd", material.Kd);
+		defferedShader.setFloat("_Material.Ks", material.Ks);
+		defferedShader.setFloat("_Material.Shininess", material.Shininess);
+		defferedShader.setVec3("_EyePos", camera.position);
+		defferedShader.setVec3("_LightDirection", light.direction);
+		defferedShader.setFloat("_minBias", shadow.minBias);
+		defferedShader.setFloat("_maxBias", shadow.maxBias);
+		defferedShader.setInt("_ShadowMap", 3);
+		//litShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		defferedShader.setMat4("_LightViewProj", lightViewProjection);
 
 		glBindVertexArray(dummyVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
-
-		//ShadowMap Pass
-
-		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.fbo);
-		glViewport(0, 0, shadowMap.width, shadowMap.height);
-		glClear(GL_DEPTH_BUFFER_BIT);
-
-		depthOnlyShader.use();
-		//Render scene from light’s point of view
-		depthOnlyShader.setMat4("_ViewProjection", lightViewProjection);
-		drawScene(monkeyModel, planeMesh, depthOnlyShader);
-
-
-		glCullFace(GL_BACK);
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
-		glViewport(0, 0, screenWidth, screenHeight);
-
-		//RENDER
-		glClearColor(0.6f,0.8f,0.92f,1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		//Bind rock texture to texture unit 0 
-		glBindTextureUnit(1, rockTexture);
-		glBindTextureUnit(0, shadowMap.depthBuffer);
-
-		litShader.use();
-
-		
-		litShader.setFloat("_Material.Ka", material.Ka);
-		litShader.setFloat("_Material.Kd", material.Kd);
-		litShader.setFloat("_Material.Ks", material.Ks);
-		litShader.setFloat("_Material.Shininess", material.Shininess);
-		litShader.setVec3("_EyePos", camera.position);
-		litShader.setVec3("_LightDirection", light.direction);
-		litShader.setInt("_MainTex", 1);
-		litShader.setFloat("_minBias", shadow.minBias);
-		litShader.setFloat("_maxBias", shadow.maxBias);
-		litShader.setInt("_ShadowMap", 0);
-		litShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
-		litShader.setMat4("_LightViewProj", lightViewProjection);
-		drawScene(monkeyModel, planeMesh, geoShader);
-
+		//LightOrb stuff?
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
