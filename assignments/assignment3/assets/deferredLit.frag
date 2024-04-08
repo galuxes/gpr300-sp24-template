@@ -1,4 +1,5 @@
 #version 450
+#define MAX_POINT_LIGHTS 64
 out vec4 FragColor; //The color of this fragment
 
 in vec2 UV;
@@ -18,6 +19,13 @@ uniform vec3 _AmbientColor = vec3(0.3,0.4,0.46);
 uniform float _minBias = 0.02;
 uniform float _maxBias = 0.2;
 
+struct PointLight{
+	vec3 position;
+	float radius;
+	vec4 color;
+};
+
+uniform PointLight _PointLights[MAX_POINT_LIGHTS];
 
 struct Material{
 	float Ka; //Ambient coefficient (0-1)
@@ -70,6 +78,31 @@ vec3 CalcLight(vec3 normal, vec3 worldPos, vec3 albedo)
 	//light += _AmbientColor * _Material.Ka;
 }
 
+float attenuate( float d, float radius){
+	float i = clamp(1.0 - pow(d/radius,4.0),0.0,1.0);
+	return i * i;
+}
+
+vec3 calcPointLight(PointLight light, vec3 normal, vec3 pos){
+	vec3 diff = light.position - pos;
+	//Direction toward light position
+	vec3 toLight = normalize(diff);
+
+	float diffuseFactor = max(dot(normal,toLight),0.0);
+	//Calculate specularly reflected light
+	vec3 toEye = normalize(_EyePos - pos);
+	//Blinn-phong uses half angle
+	vec3 h = normalize(toLight + toEye);
+	float specularFactor = pow(max(dot(normal,h),0.0),_Material.Shininess);
+
+	vec3 lightColor = (diffuseFactor + specularFactor) * light.color.rgb;
+	//Attenuation
+	float d = length(diff); //Distance to light
+	lightColor *= attenuate( d, light.radius); //See below for attenuation options
+	return lightColor;
+}
+
+
 void main(){
 
 	vec3 normal = texture(_gNormals,UV).xyz;
@@ -78,9 +111,14 @@ void main(){
 	
 	vec3 light = vec3(0);
 
-	LightSpacePos = _LightViewProj * vec4(worldPos, 1);
-
 	light += CalcLight(normal, worldPos, albedo);
+
+	//LightSpacePos = _LightViewProj * vec4(worldPos, 1);
+
+	for(int i = 0; i < MAX_POINT_LIGHTS; i++){
+		light += calcPointLight( _PointLights[i], normal, worldPos);
+	}
+
 
 	FragColor = vec4(albedo * light,1.0);
 }

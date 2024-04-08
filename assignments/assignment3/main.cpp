@@ -100,6 +100,29 @@ struct ShadowCamera {
 
 }shadowCamera;
 
+struct PointLight {
+	glm::vec3 position;
+	float radius;
+	glm::vec4 color;
+};
+const int MAX_POINT_LIGHTS = 64;
+PointLight pointLights[MAX_POINT_LIGHTS];
+
+void createPointLights() {
+	float scalar = 15;
+	int index = 0;
+	for (int i = -4; i < 4; i++, index++)
+	{
+		for (int j = -4; j < 4; j++, index++)
+		{
+			glm::vec3 position = glm::vec3(i * scalar, 0, j * scalar);
+			pointLights[index].position = position;
+			pointLights[index].color = glm::vec4(rand(), rand(), rand(), 1);
+			pointLights[index].radius = 5;
+		}
+	}
+}
+
 Framebuffer createFrameBuffer(unsigned int width, unsigned int height, int colorFormat)
 {
 	framebuffer.width = width;
@@ -242,6 +265,7 @@ int main() {
 
 	unsigned int dummyVAO;
 
+	createPointLights();
 	
 	gBuffer = createGBuffer(screenWidth, screenHeight);
 	createFrameBuffer(screenWidth, screenHeight, 0);//idk what color format is yet
@@ -313,6 +337,12 @@ int main() {
 		glBindTextureUnit(2, gBuffer.colorBuffer[2]);
 		glBindTextureUnit(3, shadowMap.depthBuffer); //For shadow mapping
 		
+		for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
+			defferedShader.setVec3("_PointLights[" + std::to_string(i) + "].position", pointLights[i].position);
+			defferedShader.setFloat("_PointLights[" + std::to_string(i) + "].radius", pointLights[i].radius);
+			defferedShader.setVec4("_PointLights[" + std::to_string(i) + "].color", pointLights[i].color);
+		}
+
 		defferedShader.setFloat("_Material.Ka", material.Ka);
 		defferedShader.setFloat("_Material.Kd", material.Kd);
 		defferedShader.setFloat("_Material.Ks", material.Ks);
