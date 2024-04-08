@@ -109,7 +109,7 @@ const int MAX_POINT_LIGHTS = 64;
 PointLight pointLights[MAX_POINT_LIGHTS];
 
 void createPointLights() {
-	float scalar = 15;
+	float scalar = 10;
 	int index = 0;
 	for (int i = -4; i < 4; i++, index++)
 	{
@@ -117,7 +117,7 @@ void createPointLights() {
 		{
 			glm::vec3 position = glm::vec3(i * scalar, 0, j * scalar);
 			pointLights[index].position = position;
-			pointLights[index].color = glm::vec4(rand(), rand(), rand(), 1);
+			pointLights[index].color = glm::vec4(rand() % 2, rand() % 2, rand() % 2, 1);
 			pointLights[index].radius = 5;
 		}
 	}
