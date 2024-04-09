@@ -105,20 +105,20 @@ struct PointLight {
 	float radius;
 	glm::vec4 color;
 };
-const int MAX_POINT_LIGHTS = 64;
+const int MAX_POINT_LIGHTS = 256;
 PointLight pointLights[MAX_POINT_LIGHTS];
 
 void createPointLights() {
-	float scalar = 10;
+	float scalar = 4.5;
 	int index = 0;
-	for (int i = -4; i < 4; i++, index++)
+	for (int i = -8; i < 8; i++, index++)
 	{
-		for (int j = -4; j < 4; j++, index++)
+		for (int j = -8; j < 8; j++, index++)
 		{
-			glm::vec3 position = glm::vec3(i * scalar, 0, j * scalar);
+			glm::vec3 position = glm::vec3(i * scalar + (0.5 * scalar), 0, j * scalar + (0.5 * scalar));
 			pointLights[index].position = position;
 			pointLights[index].color = glm::vec4(rand() % 2, rand() % 2, rand() % 2, 1);
-			pointLights[index].radius = 5;
+			pointLights[index].radius = 10;
 		}
 	}
 }
@@ -251,12 +251,13 @@ int main() {
 	ew::Shader depthOnlyShader = ew::Shader("assets/depthOnly.vert", "assets/depthOnly.frag");
 	ew::Shader geoShader = ew::Shader("assets/geo.vert", "assets/geo.frag");
 	ew::Shader defferedShader = ew::Shader("assets/deferredLit.vert", "assets/deferredLit.frag");
+	ew::Shader lightOrbShader = ew::Shader("assets/lightOrb.vert", "assets/lightOrb.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
 	GLuint rockTexture = ew::loadTexture("assets/Rock037_2K-PNG/Rock037_2K-PNG_Color.png");
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
 
 	planeTransform.position.y += -1;
-	planeTransform.scale *= 100;
+	//planeTransform.scale *= 100;
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
@@ -266,6 +267,7 @@ int main() {
 	unsigned int dummyVAO;
 
 	createPointLights();
+	ew::Mesh sphereMesh = ew::Mesh(ew::createSphere(1.0f, 8));
 	
 	gBuffer = createGBuffer(screenWidth, screenHeight);
 	createFrameBuffer(screenWidth, screenHeight, 0);//idk what color format is yet
@@ -359,6 +361,26 @@ int main() {
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		//LightOrb stuff?
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.fbo); //Read from gBuffer 
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer.fbo); //Write to current fbo
+		glBlitFramebuffer(
+			0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST
+		);
+
+		//Draw all light orbs
+		lightOrbShader.use();
+		lightOrbShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		for (int i = 0; i < MAX_POINT_LIGHTS; i++)
+		{
+			glm::mat4 m = glm::mat4(1.0f);
+			m = glm::translate(m, pointLights[i].position);
+			m = glm::scale(m, glm::vec3(0.2f)); //Whatever radius you want
+
+			lightOrbShader.setMat4("_Model", m);
+			lightOrbShader.setVec3("_Color", pointLights[i].color);
+			sphereMesh.draw();
+		}
+
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -384,18 +406,19 @@ int main() {
 }
 
 void drawScene(ew::Model monkeyModel, ew::Mesh planeMesh, ew::Shader &shader) {//Draws scene using current shader
-	shader.setMat4("_Model", planeTransform.modelMatrix());
-	planeMesh.draw();
 	float scalar = 4.5;
-	for (int i = -50; i < 50; i++)
+	for (int i = -25; i < 25; i++)
 	{
-		for (int j = -50; j < 50; j++) 
+		for (int j = -25; j < 25; j++) 
 		{
 			ew::Transform temp = monkeyTransform;
 			glm::vec3 offset = glm::vec3( i*scalar, 0, j*scalar);
 			temp.position += offset;
 			shader.setMat4("_Model", temp.modelMatrix());
 			monkeyModel.draw();
+			temp.position -= glm::vec3(0, 1, 0);
+			shader.setMat4("_Model", temp.modelMatrix());
+			planeMesh.draw();
 		}
 	}
 }

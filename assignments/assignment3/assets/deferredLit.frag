@@ -1,5 +1,5 @@
 #version 450
-#define MAX_POINT_LIGHTS 64
+#define MAX_POINT_LIGHTS 256
 out vec4 FragColor; //The color of this fragment
 
 in vec2 UV;
